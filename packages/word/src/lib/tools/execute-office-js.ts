@@ -28,8 +28,8 @@ export function createExecuteOfficeJsTool(ctx: AgentContext) {
       explanation: Type.Optional(
         Type.String({
           description:
-            "Brief explanation of what this code does (max 100 chars)",
-          maxLength: 100,
+            "Brief explanation of what this code does (max 300 chars)",
+          maxLength: 300,
         }),
       ),
     }),
