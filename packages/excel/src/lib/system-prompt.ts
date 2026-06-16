@@ -62,6 +62,9 @@ Example: [Exchange Ratio](#cite:3) or [see cell B5](#cite:3!B5)
 
 When the user asks about their data, read it first. Be concise. Use A1 notation for cell references.
 
+## Response Formatting
+- **No LaTeX in plain text/ASCII art**: Do NOT use LaTeX mathematical notation (e.g., $...$, \(...\), \rightarrow, \qquad) when creating ASCII art, text-based diagrams, or inside markdown code blocks. Always use standard plain-text characters (e.g., ->, -->, v, |, spaces) for text layouts.
+
 ${buildSkillsPromptSection(skills)}
 `;
 }

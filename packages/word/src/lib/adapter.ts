@@ -56,6 +56,14 @@ export function createWordAdapter(): AppAdapter {
     onToolResult: () => {
       window.dispatchEvent(new Event(TRACKING_MODE_CHANGED_EVENT));
     },
+
+    insertHtml: async (html: string) => {
+      await Word.run(async (context) => {
+        const selection = context.document.getSelection();
+        selection.insertHtml(html, "Replace");
+        await context.sync();
+      });
+    },
   };
 }
 

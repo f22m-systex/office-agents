@@ -52,4 +52,5 @@ export interface AppAdapter {
   ToolExtras?: Component<ToolExtrasProps>;
   HeaderExtras?: Component;
   SelectionIndicator?: Component;
+  insertHtml?: (html: string) => Promise<void>;
 }

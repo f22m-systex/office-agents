@@ -3,6 +3,7 @@
   import {
     Check,
     ChevronDown,
+    Contrast,
     Eye,
     EyeOff,
     FolderOpen,
@@ -27,6 +28,7 @@
   type Theme = "light" | "dark";
 
   const THEME_KEY = "office-agents-theme";
+  const HIGH_CONTRAST_KEY = "office-agents-high-contrast";
 
   interface Props {
     adapter: AppAdapter;
@@ -50,6 +52,7 @@
   let sessionDropdownRef = $state<HTMLDivElement | null>(null);
 
   let theme = $state<Theme>(loadTheme());
+  let highContrast = $state<boolean>(loadHighContrast());
 
   function loadTheme(): Theme {
     const saved = localStorage.getItem(THEME_KEY) as Theme | null;
@@ -62,10 +65,25 @@
     return initial;
   }
 
+  function loadHighContrast(): boolean {
+    const saved = localStorage.getItem(HIGH_CONTRAST_KEY);
+    return saved === "true";
+  }
+
   function toggleTheme() {
     theme = theme === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem(THEME_KEY, theme);
+  }
+
+  function toggleHighContrast() {
+    highContrast = !highContrast;
+    if (highContrast) {
+      document.documentElement.setAttribute("data-theme-mode", "high-contrast");
+    } else {
+      document.documentElement.removeAttribute("data-theme-mode");
+    }
+    localStorage.setItem(HIGH_CONTRAST_KEY, highContrast ? "true" : "false");
   }
 
   function formatTokens(value: number): string {
@@ -146,6 +164,20 @@
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  });
+
+  $effect(() => {
+    const root = document.documentElement;
+    const localStoragePrefix = context.namespace.localStoragePrefix;
+    const family = localStorage.getItem(`${localStoragePrefix}-font-family`) || "default";
+    const size = localStorage.getItem(`${localStoragePrefix}-font-size`) || "14px";
+
+    root.style.fontSize = size;
+    if (family !== "default") {
+      root.style.setProperty("--chat-font-mono", family);
+    } else {
+      root.style.removeProperty("--chat-font-mono");
+    }
   });
 
   onDestroy(() => {
@@ -321,6 +353,15 @@
           {:else}
             <Moon size={14} />
           {/if}
+        </button>
+
+        <button
+          type="button"
+          onclick={toggleHighContrast}
+          class={`p-1.5 transition-colors ${highContrast ? "text-(--chat-accent)" : "text-(--chat-text-muted) hover:text-(--chat-text-primary)"}`}
+          data-tooltip={highContrast ? "High contrast: ON" : "High contrast: OFF"}
+        >
+          <Contrast size={14} />
         </button>
 
         {#if activeTab === "chat" && $runtimeState.messages.length > 0}

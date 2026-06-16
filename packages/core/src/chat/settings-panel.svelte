@@ -63,6 +63,39 @@
   let exaApiKey = $state(savedWeb.apiKeys.exa || "");
   let showAdvancedWebKeys = $state(false);
 
+  const FONT_FAMILY_KEY = `${ns.localStoragePrefix}-font-family`;
+  const FONT_SIZE_KEY = `${ns.localStoragePrefix}-font-size`;
+
+  let fontFamily = $state<string>(localStorage.getItem(FONT_FAMILY_KEY) || "default");
+  let fontSize = $state<string>(localStorage.getItem(FONT_SIZE_KEY) || "14px");
+
+  function handleFontFamilyChange(event: Event) {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    fontFamily = value;
+    localStorage.setItem(FONT_FAMILY_KEY, value);
+    const root = document.documentElement;
+    if (value !== "default") {
+      root.style.setProperty("--chat-font-mono", value);
+    } else {
+      root.style.removeProperty("--chat-font-mono");
+    }
+  }
+
+  function handleFontSizeChange(event: Event) {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    fontSize = value;
+    localStorage.setItem(FONT_SIZE_KEY, value);
+    const root = document.documentElement;
+    root.style.fontSize = value;
+  }
+
+  let showSaved = $state(false);
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  let customModels = $state<Array<{ id: string; name: string }>>([]);
+  let fetchingCustomModels = $state(false);
+  let fetchCustomModelsError = $state("");
+
   let oauthFlow = $state<OAuthFlowState>(
     saved?.authMethod === "oauth"
       ? loadOAuthCredentials(ns, saved.provider)
@@ -95,8 +128,106 @@
   const isConfigured = $derived($runtimeState.providerConfig !== null);
   const showApiKeyInput = $derived(!(hasOAuth && authMethod === "oauth"));
 
+  const getMissingFields = $derived.by(() => {
+    const missing: string[] = [];
+    if (!provider) missing.push("Provider");
+    if (!apiKey) missing.push("API Key");
+    if (!model) missing.push("Model");
+    if (isCustom) {
+      if (!apiType) missing.push("API Type");
+      if (!customBaseUrl) missing.push("Base URL");
+    }
+    return missing;
+  });
+
   const inputStyle =
     "border-radius: var(--chat-radius); font-family: var(--chat-font-mono)";
+
+  function isOllamaUrl(url: string): boolean {
+    const u = url.toLowerCase();
+    return u.includes(":11434") || u.includes(":11435") || u.includes("ollama");
+  }
+
+  async function fetchModelsFromBaseUrl(baseUrl: string) {
+    if (!baseUrl.trim()) {
+      customModels = [];
+      fetchCustomModelsError = "";
+      return;
+    }
+
+    fetchingCustomModels = true;
+    fetchCustomModelsError = "";
+    customModels = [];
+
+    try {
+      const isOllama = isOllamaUrl(baseUrl);
+      let endpoint: string;
+      let headers: Record<string, string> = {
+        "Accept": "application/json",
+      };
+
+      if (isOllama) {
+        // Ollama API format
+        endpoint = new URL("/api/tags", baseUrl).toString();
+      } else {
+        // OpenAI-compatible API format
+        endpoint = new URL("/models", baseUrl).toString();
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+      }
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json() as any;
+
+      if (isOllama) {
+        // Ollama response format: { models: [{ name: "...", model: "...", ... }] }
+        if (data.models && Array.isArray(data.models)) {
+          customModels = data.models.map((m: any) => ({
+            id: m.name || m.model || "",
+            name: m.name || m.model || "",
+          })).filter((m: any) => m.id);
+
+          if (customModels.length === 0) {
+            fetchCustomModelsError = "No models found";
+          }
+        } else {
+          throw new Error("Invalid Ollama response format");
+        }
+      } else {
+        // OpenAI-compatible response format: { data: [{ id: "...", object: "..." }] }
+        if (data.data && Array.isArray(data.data)) {
+          customModels = data.data
+            .filter((m: any) => m.object !== "embedding" && m.object !== "image" && m.id)
+            .map((m: any) => ({
+              id: m.id,
+              name: m.id,
+            }));
+
+          if (customModels.length === 0) {
+            fetchCustomModelsError = "No suitable models found";
+          }
+        } else {
+          throw new Error("Invalid API response format");
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      fetchCustomModelsError = message;
+      customModels = [];
+      console.error("Failed to fetch models:", error);
+    } finally {
+      fetchingCustomModels = false;
+    }
+  }
 
   function updateAndSync(
     updates: Partial<{
@@ -160,6 +291,13 @@
 
     saveConfig(ns, config);
     chat.setProviderConfig(config);
+
+    // Show saved indicator
+    if (saveTimeout) clearTimeout(saveTimeout);
+    showSaved = true;
+    saveTimeout = setTimeout(() => {
+      showSaved = false;
+    }, 2000);
   }
 
   function updateWebSettings(
@@ -341,8 +479,16 @@
 
 <div class="flex-1 overflow-y-auto p-4 space-y-6" style="font-family: var(--chat-font-mono)">
   <div>
-    <div class="text-[10px] uppercase tracking-widest text-(--chat-text-muted) mb-4">
-      api configuration
+    <div class="flex items-center justify-between">
+      <div class="text-[10px] uppercase tracking-widest text-(--chat-text-muted) mb-4">
+        api configuration
+      </div>
+      {#if showSaved}
+        <div class="text-[10px] text-(--chat-success) flex items-center gap-1 animate-fade-in-out">
+          <Check size={12} />
+          Saved
+        </div>
+      {/if}
     </div>
 
     <div class="space-y-4">
@@ -393,31 +539,73 @@
           <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
             Base URL
           </span>
-          <input
-            type="text"
-            bind:value={customBaseUrl}
-            oninput={() => updateAndSync({ customBaseUrl })}
-            placeholder="https://api.openai.com/v1"
-            class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-sm px-3 py-2 border border-(--chat-border) placeholder:text-(--chat-text-muted) focus:outline-none focus:border-(--chat-border-active)"
-            style={inputStyle}
-          />
-          <p class="text-[10px] text-(--chat-text-muted) mt-1">
-            The API endpoint URL for your provider
-          </p>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              bind:value={customBaseUrl}
+              oninput={() => updateAndSync({ customBaseUrl })}
+              placeholder="https://api.openai.com/v1 or http://localhost:11434"
+              class="flex-1 bg-(--chat-input-bg) text-(--chat-text-primary) text-sm px-3 py-2 border border-(--chat-border) placeholder:text-(--chat-text-muted) focus:outline-none focus:border-(--chat-border-active)"
+              style={inputStyle}
+              disabled={fetchingCustomModels}
+            />
+            <button
+              type="button"
+              onclick={() => void fetchModelsFromBaseUrl(customBaseUrl)}
+              disabled={fetchingCustomModels || !customBaseUrl.trim()}
+              class="px-3 py-2 bg-(--chat-bg-secondary) text-(--chat-text-primary) text-sm border border-(--chat-border) hover:bg-(--chat-bg-tertiary) focus:outline-none focus:border-(--chat-border-active) disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+              style={inputStyle}
+              data-tooltip={isOllamaUrl(customBaseUrl) ? "Fetch models from Ollama" : "Fetch models from API"}
+            >
+              {#if fetchingCustomModels}
+                <div class="inline-block w-3 h-3 border-2 border-(--chat-text-muted) border-t-(--chat-accent) rounded-full animate-spin"></div>
+              {:else}
+                Fetch
+              {/if}
+            </button>
+          </div>
+          {#if fetchCustomModelsError}
+            <p class="text-[10px] text-(--chat-error) mt-1">
+              {fetchCustomModelsError}
+            </p>
+          {:else}
+            <p class="text-[10px] text-(--chat-text-muted) mt-1">
+              {#if isOllamaUrl(customBaseUrl)}
+                Ollama endpoint detected - click Fetch to load models
+              {:else}
+                OpenAI-compatible API - click Fetch to load models
+              {/if}
+            </p>
+          {/if}
         </label>
 
         <label class="block">
           <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
-            Model ID
+            Model {customModels.length > 0 ? `(${customModels.length} available)` : ""}
           </span>
-          <input
-            type="text"
-            bind:value={model}
-            oninput={() => updateAndSync({ model })}
-            placeholder="gpt-4o"
-            class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-sm px-3 py-2 border border-(--chat-border) placeholder:text-(--chat-text-muted) focus:outline-none focus:border-(--chat-border-active)"
-            style={inputStyle}
-          />
+          {#if customModels.length > 0}
+            <select
+              value={model}
+              onchange={(event) =>
+                updateAndSync({ model: (event.currentTarget as HTMLSelectElement).value })}
+              class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-sm px-3 py-2 border border-(--chat-border) focus:outline-none focus:border-(--chat-border-active)"
+              style={inputStyle}
+            >
+              <option value="">Select model...</option>
+              {#each customModels as availableModel (availableModel.id)}
+                <option value={availableModel.id}>{availableModel.name}</option>
+              {/each}
+            </select>
+          {:else}
+            <input
+              type="text"
+              bind:value={model}
+              oninput={() => updateAndSync({ model })}
+              placeholder="gpt-4o"
+              class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-sm px-3 py-2 border border-(--chat-border) placeholder:text-(--chat-text-muted) focus:outline-none focus:border-(--chat-border-active)"
+              style={inputStyle}
+            />
+          {/if}
         </label>
       {/if}
 
@@ -779,6 +967,48 @@
     </div>
   </div>
 
+  <div class="border-t border-(--chat-border) pt-4 space-y-4">
+    <div class="text-[10px] uppercase tracking-widest text-(--chat-text-muted)">
+      介面外觀 (Appearance)
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block">
+        <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
+          字型 (Font Family)
+        </span>
+        <select
+          value={fontFamily}
+          onchange={handleFontFamilyChange}
+          class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-xs px-2 py-1.5 border border-(--chat-border) focus:outline-none focus:border-(--chat-border-active)"
+          style="border-radius: var(--chat-radius)"
+        >
+          <option value="default">預設等寬字型 (Default)</option>
+          <option value='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'>系統無襯線體 (Sans-Serif)</option>
+          <option value='"Microsoft JhengHei", "Microsoft YaHei", sans-serif'>微軟正黑體 (Microsoft JhengHei)</option>
+          <option value='Georgia, Cambria, "Times New Roman", serif'>襯線體 (Serif)</option>
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
+          字型大小 (Font Size)
+        </span>
+        <select
+          value={fontSize}
+          onchange={handleFontSizeChange}
+          class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-xs px-2 py-1.5 border border-(--chat-border) focus:outline-none focus:border-(--chat-border-active)"
+          style="border-radius: var(--chat-radius)"
+        >
+          <option value="12px">小 (12px)</option>
+          <option value="14px">中 (14px - 預設)</option>
+          <option value="16px">大 (16px)</option>
+          <option value="18px">特大 (18px)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
   <div class="border-t border-(--chat-border) pt-4">
     <div class="flex items-center gap-2 text-xs">
       {#if isConfigured}
@@ -794,7 +1024,11 @@
         </span>
       {:else}
         <span class="text-(--chat-text-muted)">
-          Fill in all fields above to get started
+          {#if getMissingFields.length > 0}
+            Missing: {getMissingFields.join(", ")}
+          {:else}
+            Fill in required fields above to get started
+          {/if}
         </span>
       {/if}
     </div>

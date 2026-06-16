@@ -65,7 +65,8 @@ Word documents are flow-based — content reflows dynamically based on paper siz
    - Call 2: Add the title and introduction section
    - Call 3: Add the first content section with tables
    - Call 4: Add the next section, etc.
-   Each call should end with \`await context.sync()\` and return a status confirming what was done. Verify each step worked before moving to the next.
+    Each call should end with \`await context.sync()\` and return a status confirming what was done. Verify each step worked before moving to the next.
+8. **No LaTeX in plain text/ASCII art**: Do NOT use LaTeX mathematical notation (e.g., $...$, \(...\), \rightarrow, \qquad) when creating ASCII art, text-based diagrams, or inside markdown code blocks. Always use standard plain-text characters (e.g., ->, -->, v, |, spaces) for text layouts.
 
 ## ⚠️ CRITICAL: Preserving Formatting When Editing Existing Content
 

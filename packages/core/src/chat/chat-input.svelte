@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Paperclip, Send, Square, X } from "lucide-svelte";
+  import { ClipboardPaste, Paperclip, Send, Square, X } from "lucide-svelte";
   import { getChatContext } from "./chat-runtime-context";
+  import { renderMarkdownSync } from "./markdown";
 
   const LINE_HEIGHT = 20;
   const MIN_ROWS = 1;
@@ -40,6 +41,24 @@
       trimmed,
       attachmentNames.length > 0 ? attachmentNames : undefined,
     );
+  }
+
+  async function handleInsertMarkdown() {
+    const trimmed = input.trim();
+    if (!trimmed || !chat.adapter.insertHtml) return;
+
+    try {
+      const html = renderMarkdownSync(trimmed);
+      await chat.adapter.insertHtml(html);
+      input = "";
+      autoResize();
+    } catch (err) {
+      console.error("Failed to insert Markdown:", err);
+      runtimeState.update((state) => ({
+        ...state,
+        error: err instanceof Error ? err.message : "Failed to insert Markdown",
+      }));
+    }
   }
 
   async function handleFileSelect(event: Event) {
@@ -152,14 +171,28 @@
           <Square size={13} />
         </button>
       {:else}
-        <button
-          type="button"
-          onclick={handleSubmit}
-          disabled={!$runtimeState.providerConfig || !input.trim()}
-          class="flex items-center justify-center w-6 h-5 text-(--chat-text-muted) hover:text-(--chat-text-primary) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <Send size={13} />
-        </button>
+        <div class="flex items-center gap-1.5">
+          {#if chat.adapter.insertHtml}
+            <button
+              type="button"
+              onclick={handleInsertMarkdown}
+              disabled={!input.trim()}
+              class="flex items-center justify-center w-6 h-5 text-(--chat-text-muted) hover:text-(--chat-text-primary) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="貼上並轉換格式插入 Word (免 AI)"
+            >
+              <ClipboardPaste size={13} />
+            </button>
+          {/if}
+          <button
+            type="button"
+            onclick={handleSubmit}
+            disabled={!$runtimeState.providerConfig || !input.trim()}
+            class="flex items-center justify-center w-6 h-5 text-(--chat-text-muted) hover:text-(--chat-text-primary) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="傳送給 AI"
+          >
+            <Send size={13} />
+          </button>
+        </div>
       {/if}
     </div>
   </div>

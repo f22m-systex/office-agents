@@ -12,8 +12,8 @@ html {
   --chat-border: #2a2a2a;
   --chat-border-active: #3a3a3a;
   --chat-text-primary: #e8e8e8;
-  --chat-text-secondary: #888888;
-  --chat-text-muted: #555555;
+  --chat-text-secondary: #a0a0a0;
+  --chat-text-muted: #787878;
   --chat-accent: #6366f1;
   --chat-accent-hover: #818cf8;
   --chat-user-bg: #1a1a2e;
@@ -48,6 +48,17 @@ html {
   --chat-warning: #d97706;
   --chat-warning-muted: #92400e;
   --chat-warning-bg: rgba(217, 119, 6, 0.12);
+}
+
+/* High contrast mode for improved accessibility */
+[data-theme-mode="high-contrast"] {
+  --chat-text-secondary: #cccccc;
+  --chat-text-muted: #b3b3b3;
+}
+
+[data-theme="light"][data-theme-mode="high-contrast"] {
+  --chat-text-secondary: #333333;
+  --chat-text-muted: #555555;
 }
 
 /* Tooltip — add data-tooltip="..." to any element */
@@ -268,4 +279,14 @@ html {
 .markdown-content img {
   max-width: 100%;
   border-radius: var(--chat-radius);
+}
+
+@keyframes fade-in-out {
+  0% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-fade-in-out {
+  animation: fade-in-out 2s ease-out forwards;
 }
