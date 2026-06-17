@@ -15,7 +15,8 @@
     "start": "office-addin-debugging start manifest.xml",
     "stop": "office-addin-debugging stop manifest.xml",
     "watch": "vite build --mode development --watch",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "preview": "vite preview --port 3002 --host"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "catalog:",
