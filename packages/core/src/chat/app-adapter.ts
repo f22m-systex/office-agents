@@ -35,6 +35,7 @@ export interface AppAdapter {
   getDocumentMetadata?: () => Promise<{
     metadata: object;
     nameMap?: Record<number, string>;
+    images?: { data: string; mimeType: string }[];
   } | null>;
   onToolResult?: (toolCallId: string, result: string, isError: boolean) => void;
   metadataTag?: string;

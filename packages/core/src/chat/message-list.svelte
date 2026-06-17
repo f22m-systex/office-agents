@@ -98,6 +98,15 @@
     <ThinkingBlock thinking={(part as ThinkingPart).thinking} isStreaming={streaming} />
   {:else if part.type === "toolCall"}
     <ToolCallBlock part={part as ToolCallPart} />
+  {:else if part.type === "image"}
+    <div class="my-2">
+      <img
+        src="data:{part.mimeType};base64,{part.data}"
+        alt="User uploaded content"
+        class="max-w-full h-auto border border-(--chat-border)"
+        style="border-radius: var(--chat-radius)"
+      />
+    </div>
   {:else}
     <MarkdownContent
       text={part.text}

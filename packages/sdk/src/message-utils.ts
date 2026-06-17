@@ -11,6 +11,7 @@ export type ToolCallStatus = "pending" | "running" | "complete" | "error";
 
 export type MessagePart =
   | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
   | { type: "thinking"; thinking: string }
   | {
       type: "toolCall";
@@ -109,11 +110,35 @@ export function agentMessagesToChatMessages(
   const result: ChatMessage[] = [];
   for (const msg of agentMessages) {
     if (msg.role === "user") {
-      const text = stripEnrichment((msg as UserMessage).content, metadataTag);
+      const userMsg = msg as UserMessage;
+      const parts: MessagePart[] = [];
+
+      if (typeof userMsg.content === "string") {
+        parts.push({
+          type: "text",
+          text: stripEnrichment(userMsg.content, metadataTag),
+        });
+      } else {
+        for (const block of userMsg.content) {
+          if (block.type === "text") {
+            const text = stripEnrichment(block.text, metadataTag);
+            if (text) {
+              parts.push({ type: "text", text });
+            }
+          } else if (block.type === "image") {
+            parts.push({
+              type: "image",
+              data: block.data,
+              mimeType: block.mimeType,
+            });
+          }
+        }
+      }
+
       result.push({
         id: generateId(),
         role: "user",
-        parts: [{ type: "text", text }],
+        parts,
         timestamp: msg.timestamp,
       });
     } else if (msg.role === "assistant") {

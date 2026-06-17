@@ -1,5 +1,5 @@
 import type { AppAdapter } from "@office-agents/core";
-import { getOrCreateDocumentId } from "@office-agents/core";
+import { getOrCreateDocumentId, resizeImage } from "@office-agents/core";
 import SelectionIndicator from "./components/selection-indicator.svelte";
 import TrackChangesIndicator from "./components/track-changes-indicator.svelte";
 import wordApiFullDts from "./docs/word-officejs-api.d.ts?raw";
@@ -46,8 +46,7 @@ export function createWordAdapter(): AppAdapter {
 
     getDocumentMetadata: async () => {
       try {
-        const metadata = await getDocumentMetadata();
-        return { metadata };
+        return await getDocumentMetadata();
       } catch {
         return null;
       }
@@ -78,16 +77,23 @@ const KEY_STYLES = [
   "Subtitle",
 ] as const;
 
-async function getDocumentMetadata(): Promise<object> {
+async function getDocumentMetadata(): Promise<{
+  metadata: object;
+  images?: { data: string; mimeType: string }[];
+}> {
   return Word.run(async (context) => {
     const body = context.document.body;
     const tables = body.tables;
     const contentControls = body.contentControls;
     const sections = context.document.sections;
+    const inlinePictures = body.inlinePictures;
+
     body.load("text");
     tables.load("items");
     contentControls.load("items");
     sections.load("items");
+    inlinePictures.load("items");
+
     await context.sync();
 
     const hasContent = body.text.trim().length > 0;
@@ -248,7 +254,7 @@ async function getDocumentMetadata(): Promise<object> {
       // selection API may fail in some contexts
     }
 
-    return {
+    const metadata = {
       sectionCount: sections.items.length,
       tableCount: tables.items.length,
       contentControlCount: contentControls.items.length,
@@ -259,6 +265,49 @@ async function getDocumentMetadata(): Promise<object> {
       runFormattingSample,
       hasRunLevelOverrides,
       selection: selectionInfo,
+    };
+
+    const images: { data: string; mimeType: string }[] = [];
+    const maxImages = 10;
+    const picsToProcess = inlinePictures.items.slice(0, maxImages);
+
+    const picResults: OfficeExtension.ClientResult<string>[] = [];
+    for (const pic of picsToProcess) {
+      picResults.push(pic.getBase64ImageSrc());
+    }
+
+    if (picResults.length > 0) {
+      await context.sync();
+
+      for (const res of picResults) {
+        if (res.value) {
+          try {
+            const match = res.value.match(/^data:([^;]+);base64,(.+)$/);
+            const mimeType = match ? match[1] : "image/png";
+            const base64 = match ? match[2] : res.value;
+
+            const resized = await resizeImage(base64, mimeType, {
+              maxWidth: 1024,
+              maxHeight: 1024,
+            });
+            images.push({ data: resized.data, mimeType: resized.mimeType });
+          } catch (err) {
+            console.error("Failed to resize document image:", err);
+            // If resize fails, try to at least strip the data URL prefix if present
+            const match = res.value.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              images.push({ data: match[2], mimeType: match[1] });
+            } else {
+              images.push({ data: res.value, mimeType: "image/png" });
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      metadata,
+      images: images.length > 0 ? images : undefined,
     };
   });
 }
