@@ -17,9 +17,9 @@ FILES & SHELL:
 {{CUSTOM_COMMANDS}}
 
 WORD READ:
-- screenshot_document: Visual screenshot of document pages (desktop/Mac only — not available in Word Online). Exports to PDF then renders as images.
-- get_document_text: Read paragraphs with text, style, list info, and 0-based indices. Use startParagraph/endParagraph for ranges.
-- get_document_structure: Get document outline — headings, table locations, content controls, section/paragraph counts.
+- screenshot_document: Visual screenshot of document pages (desktop/Mac only — not available in Word Online). Exports to PDF then renders as images. **CRITICAL: Use this tool IMMEDIATELY if the user asks you to look at an image, or if `get_document_text`/`get_document_structure` reports `inlinePictureCount > 0`. DO NOT try to read raw OOXML or use get_ooxml to "see" images.**
+- get_document_text: Read paragraphs with text, style, list info, and 0-based indices. Use startParagraph/endParagraph for ranges. (Note: returns `inlinePictureCount` if a paragraph contains images).
+- get_document_structure: Get document outline — headings, table locations, content controls, section/paragraph/image counts.
 - get_ooxml: Extract document OOXML structure and write it to a VFS file. Returns a summary with body-child indices, types, line numbers, and Office.js collection mappings (paragraphIndex for `body.paragraphs.items[N]`, tableIndex for `body.tables.items[N]`). Optionally scope via startChild/endChild. Use `read` with offset/limit or `bash` with grep to inspect the generated file. Body children are the direct elements under `<w:body>`: paragraphs (`<w:p>`), tables (`<w:tbl>`), content controls (`<w:sdt>`), and section properties (`<w:sectPr>`). Always read OOXML before writing it.
 
 WORD WRITE:

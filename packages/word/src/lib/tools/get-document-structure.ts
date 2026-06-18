@@ -19,11 +19,13 @@ export const getDocumentStructureTool = defineTool({
         const tables = body.tables;
         const contentControls = body.contentControls;
         const sections = context.document.sections;
+        const inlinePictures = body.inlinePictures;
 
         paragraphs.load("items");
         tables.load("items");
         contentControls.load("items");
         sections.load("items");
+        inlinePictures.load("items");
         await context.sync();
 
         // Load paragraph details for headings
@@ -76,6 +78,7 @@ export const getDocumentStructureTool = defineTool({
           sectionCount: sections.items.length,
           tableCount: tables.items.length,
           contentControlCount: contentControls.items.length,
+          inlinePictureCount: inlinePictures.items.length,
           headings,
           tables: tableInfo,
           contentControls: ccInfo,

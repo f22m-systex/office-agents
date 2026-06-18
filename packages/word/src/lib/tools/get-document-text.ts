@@ -45,6 +45,7 @@ export const getDocumentTextTool = defineTool({
 
         const slice = paragraphs.items.slice(start, end);
         for (const p of slice) {
+          p.inlinePictures.load("items");
           if (includeFormatting) {
             p.load("text,style,alignment,outlineLevel,firstLineIndent");
             try {
@@ -65,6 +66,11 @@ export const getDocumentTextTool = defineTool({
             index: start + i,
             text: p.text,
           };
+          
+          if (p.inlinePictures && p.inlinePictures.items && p.inlinePictures.items.length > 0) {
+            entry.inlinePictureCount = p.inlinePictures.items.length;
+          }
+
           if (includeFormatting) {
             entry.style = p.style;
             entry.alignment = p.alignment;
