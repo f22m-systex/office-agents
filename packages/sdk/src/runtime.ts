@@ -20,6 +20,7 @@ import {
   deriveStats,
   extractPartsFromAssistantMessage,
   generateId,
+  type MessagePart,
   type SessionStats,
 } from "./message-utils";
 import {
@@ -62,6 +63,7 @@ export interface RuntimeAdapter {
   getDocumentMetadata?: () => Promise<{
     metadata: object;
     nameMap?: Record<number, string>;
+    images?: { data: string; mimeType: string }[];
   } | null>;
   onToolResult?: (toolCallId: string, result: string, isError: boolean) => void;
   metadataTag?: string;
@@ -510,10 +512,47 @@ export class AgentRuntime {
       return;
     }
 
+    let promptText = content;
+    const promptImages: { data: string; mimeType: string }[] = [];
+
+    if (this.adapter.getDocumentMetadata) {
+      try {
+        const meta = await this.adapter.getDocumentMetadata();
+        if (meta) {
+          const tag = this.adapter.metadataTag || "doc_context";
+          promptText = `<${tag}>\n${JSON.stringify(meta.metadata, null, 2)}\n</${tag}>\n\n${content}`;
+          if (meta.nameMap) {
+            this.update({ nameMap: meta.nameMap });
+          }
+          if (meta.images && meta.images.length > 0) {
+            promptImages.push(...meta.images);
+          }
+        }
+      } catch (err) {
+        console.error("[Runtime] Failed to get document metadata:", err);
+      }
+    }
+
+    if (attachments && attachments.length > 0) {
+      const paths = attachments
+        .map((name) => `/home/user/uploads/${name}`)
+        .join("\n");
+      promptText = `<attachments>\n${paths}\n</attachments>\n\n${promptText}`;
+    }
+
     const userMessage: ChatMessage = {
       id: generateId(),
       role: "user",
-      parts: [{ type: "text", text: content }],
+      parts: [
+        { type: "text", text: content },
+        ...promptImages.map(
+          (img): MessagePart => ({
+            type: "image",
+            data: img.data,
+            mimeType: img.mimeType,
+          }),
+        ),
+      ],
       timestamp: Date.now(),
     };
 
@@ -525,31 +564,18 @@ export class AgentRuntime {
     });
 
     try {
-      let promptContent = content;
-
-      if (this.adapter.getDocumentMetadata) {
-        try {
-          const meta = await this.adapter.getDocumentMetadata();
-          if (meta) {
-            const tag = this.adapter.metadataTag || "doc_context";
-            promptContent = `<${tag}>\n${JSON.stringify(meta.metadata, null, 2)}\n</${tag}>\n\n${content}`;
-            if (meta.nameMap) {
-              this.update({ nameMap: meta.nameMap });
-            }
-          }
-        } catch (err) {
-          console.error("[Runtime] Failed to get document metadata:", err);
-        }
+      if (promptImages.length > 0) {
+        await agent.prompt([
+          { type: "text", text: promptText },
+          ...promptImages.map((img) => ({
+            type: "image" as const,
+            data: img.data,
+            mimeType: img.mimeType,
+          })),
+        ]);
+      } else {
+        await agent.prompt(promptText);
       }
-
-      if (attachments && attachments.length > 0) {
-        const paths = attachments
-          .map((name) => `/home/user/uploads/${name}`)
-          .join("\n");
-        promptContent = `<attachments>\n${paths}\n</attachments>\n\n${promptContent}`;
-      }
-
-      await agent.prompt(promptContent);
     } catch (err) {
       console.error("[Runtime] sendMessage error:", err);
       this.isStreaming = false;
