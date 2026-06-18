@@ -4,6 +4,8 @@ import autoprefixer from "autoprefixer";
 import { createRequire } from "module";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
+import os from "os";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { viteStaticCopy } from "vite-plugin-static-copy";
@@ -17,9 +19,18 @@ async function getHttpsOptions() {
     const devCerts = await import("office-addin-dev-certs");
     const certs = await devCerts.getHttpsServerOptions();
     return { ca: certs.ca, key: certs.key, cert: certs.cert };
-  } catch {
-    console.warn("Could not load office-addin-dev-certs, HTTPS disabled");
-    return undefined;
+  } catch (err) {
+    console.warn("office-addin-dev-certs failed, falling back to manual read");
+    try {
+      const certDir = path.join(os.homedir(), ".office-addin-dev-certs");
+      const key = fs.readFileSync(path.join(certDir, "localhost.key"));
+      const cert = fs.readFileSync(path.join(certDir, "localhost.crt"));
+      const ca = fs.readFileSync(path.join(certDir, "ca.crt"));
+      return { key, cert, ca };
+    } catch (fallbackErr) {
+      console.warn("Could not load certificates manually, HTTPS disabled");
+      return undefined;
+    }
   }
 }
 
