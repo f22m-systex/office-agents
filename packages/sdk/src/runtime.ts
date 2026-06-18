@@ -565,14 +565,14 @@ export class AgentRuntime {
 
     try {
       if (promptImages.length > 0) {
-        await agent.prompt([
-          { type: "text", text: promptText },
-          ...promptImages.map((img) => ({
+        await agent.prompt(
+          promptText,
+          promptImages.map((img) => ({
             type: "image" as const,
             data: img.data,
             mimeType: img.mimeType,
-          })),
-        ]);
+          }))
+        );
       } else {
         await agent.prompt(promptText);
       }
