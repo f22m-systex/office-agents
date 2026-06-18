@@ -51,6 +51,10 @@ export class ChatController {
     return this.#runtime.sendMessage(content, attachments);
   }
 
+  pushLocalMessage(role: "user" | "assistant", content: string) {
+    return this.#runtime.pushLocalMessage(role, content);
+  }
+
   setProviderConfig(config: ProviderConfig) {
     this.#runtime.setProviderConfig(config);
   }

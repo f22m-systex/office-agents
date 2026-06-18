@@ -4,7 +4,9 @@
     LinkClickResult,
     MaybePromise,
   } from "./app-adapter";
+  import { mount, unmount } from "svelte";
   import { renderMarkdown, renderMarkdownSync } from "./markdown";
+  import MermaidBlock from "./mermaid-block.svelte";
 
   interface Props {
     text: string;
@@ -19,6 +21,7 @@
   let { text, isStreaming = false, onLinkClick }: Props = $props();
 
   let html = $state("");
+  let container: HTMLDivElement | null = $state(null);
 
   $effect(() => {
     const currentText = text;
@@ -88,6 +91,31 @@
     };
   });
 
+  $effect(() => {
+    if (!container || isStreaming) return;
+
+    const placeholders = container.querySelectorAll(".mermaid-placeholder");
+    const mounted: ReturnType<typeof mount>[] = [];
+
+    for (const el of placeholders) {
+      const code = el.getAttribute("data-code");
+      if (code) {
+        mounted.push(
+          mount(MermaidBlock, {
+            target: el,
+            props: { code },
+          }),
+        );
+      }
+    }
+
+    return () => {
+      for (const component of mounted) {
+        unmount(component);
+      }
+    };
+  });
+
   async function handleClick(event: MouseEvent) {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -112,6 +140,7 @@
 </script>
 
 <div
+  bind:this={container}
   class="markdown-content"
   onclick={handleClick}
   onkeydown={handleKeydown}

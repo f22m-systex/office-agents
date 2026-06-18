@@ -44,11 +44,24 @@ const highlighterPromise = getSingletonHighlighter({
   themes: [SHIKI_THEMES.light, SHIKI_THEMES.dark],
 });
 
-const plainMarkdown = new Marked(MARKDOWN_OPTIONS);
+const plainMarkdown = new Marked({
+  ...MARKDOWN_OPTIONS,
+  renderer: {
+    code(token) {
+      if (token.lang === "mermaid") {
+        return `<div class="mermaid-placeholder" data-code="${escapeHtml(token.text)}"></div>`;
+      }
+      return false;
+    },
+  },
+});
 const highlightedMarkdown = new Marked({
   ...MARKDOWN_OPTIONS,
   renderer: {
     code(token) {
+      if (token.lang === "mermaid") {
+        return `<div class="mermaid-placeholder" data-code="${escapeHtml(token.text)}"></div>`;
+      }
       return (token as HighlightedCodeToken).highlightedHtml ?? false;
     },
   },

@@ -58,6 +58,22 @@ export function createPowerPointAdapter(): AppAdapter {
         // Not JSON or no modified slide info
       }
     },
+
+    insertImage: async (base64Data: string) => {
+      return new Promise((resolve, reject) => {
+        Office.context.document.setSelectedDataAsync(
+          base64Data,
+          { coercionType: Office.CoercionType.Image },
+          (asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              reject(new Error(asyncResult.error.message));
+            } else {
+              resolve();
+            }
+          },
+        );
+      });
+    },
   };
 }
 

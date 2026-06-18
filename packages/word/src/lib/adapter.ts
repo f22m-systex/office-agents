@@ -63,6 +63,14 @@ export function createWordAdapter(): AppAdapter {
         await context.sync();
       });
     },
+
+    insertImage: async (base64Data: string) => {
+      await Word.run(async (context) => {
+        const selection = context.document.getSelection();
+        selection.insertInlinePictureFromBase64(base64Data, "Replace");
+        await context.sync();
+      });
+    },
   };
 }
 
