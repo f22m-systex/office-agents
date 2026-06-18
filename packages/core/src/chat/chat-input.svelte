@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { ClipboardPaste, Paperclip, Send, Square, X } from "lucide-svelte";
+  import {
+    ChartLine,
+    ClipboardPaste,
+    Paperclip,
+    Send,
+    Square,
+    X,
+  } from "lucide-svelte";
   import { getChatContext } from "./chat-runtime-context";
   import { renderMarkdownSync } from "./markdown";
 
@@ -59,6 +66,19 @@
         error: err instanceof Error ? err.message : "Failed to insert Markdown",
       }));
     }
+  }
+
+  async function handleLocalMermaid() {
+    const trimmed = input.trim();
+    if (!trimmed || $runtimeState.isStreaming) return;
+
+    const content = trimmed.includes("```mermaid")
+      ? trimmed
+      : `\`\`\`mermaid\n${trimmed}\n\`\`\``;
+
+    input = "";
+    autoResize();
+    await chat.pushLocalMessage("assistant", content);
   }
 
   async function handleFileSelect(event: Event) {
@@ -183,6 +203,15 @@
               <ClipboardPaste size={13} />
             </button>
           {/if}
+          <button
+            type="button"
+            onclick={handleLocalMermaid}
+            disabled={!input.trim() || $runtimeState.isStreaming}
+            class="flex items-center justify-center w-6 h-5 text-(--chat-text-muted) hover:text-(--chat-text-primary) disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="本地渲染 Mermaid (免 AI)"
+          >
+            <ChartLine size={13} />
+          </button>
           <button
             type="button"
             onclick={handleSubmit}

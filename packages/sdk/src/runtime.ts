@@ -586,6 +586,46 @@ export class AgentRuntime {
     }
   }
 
+  async pushLocalMessage(role: "user" | "assistant", content: string) {
+    const message: ChatMessage = {
+      id: generateId(),
+      role,
+      parts: [{ type: "text", text: content }],
+      timestamp: Date.now(),
+    };
+
+    this.updateMessages((msgs) => [...msgs, message]);
+
+    // Save to storage if possible
+    if (this.currentSessionId) {
+      const sessionId = this.currentSessionId;
+      const agentMessages = this.agent?.state.messages ?? [];
+
+      // We need to sync the local message to the agent state as well
+      // so it gets saved correctly in onStreamingEnd or future saves.
+      // However, Agent from pi-agent-core might not expect manual message pushes easily without reset.
+      // For now, we update the state and assume the next save will include it if we sync it.
+
+      if (this.agent) {
+        if (role === "user") {
+          this.agent.state.messages.push({
+            role: "user",
+            content: [{ type: "text", text: content }],
+            timestamp: message.timestamp,
+          });
+        } else {
+          this.agent.state.messages.push({
+            role: "assistant",
+            content: [{ type: "text", text: content }],
+            timestamp: message.timestamp,
+          } as AssistantMessage);
+        }
+      }
+
+      await saveSession(this.ns, sessionId, this.agent?.state.messages ?? []);
+    }
+  }
+
   clearMessages() {
     this.abort();
     this.agent?.reset();

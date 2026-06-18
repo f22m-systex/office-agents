@@ -19,6 +19,7 @@
     "just-bash": "^2.7.0",
     "lucide-svelte": "^0.577.0",
     "marked": "^17.0.4",
+    "mermaid": "^11.15.0",
     "shiki": "^4.0.2",
     "svelte": "^5.54.0"
   },

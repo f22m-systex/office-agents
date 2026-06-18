@@ -86,6 +86,15 @@ export function createExcelAdapter(): AppAdapter {
       await navigateTo(citation.sheetId, citation.range).catch(console.error);
       return "handled";
     },
+
+    insertImage: async (base64Data: string) => {
+      await Excel.run(async (context) => {
+        const sheet = context.workbook.worksheets.getActiveWorksheet();
+        sheet.shapes.addImage(base64Data);
+        await context.sync();
+      });
+    },
+
     ToolExtras: DirtyRangeExtras,
   };
 }

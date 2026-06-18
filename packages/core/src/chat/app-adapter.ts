@@ -54,4 +54,5 @@ export interface AppAdapter {
   HeaderExtras?: Component;
   SelectionIndicator?: Component;
   insertHtml?: (html: string) => Promise<void>;
+  insertImage?: (base64Data: string, mimeType: string) => Promise<void>;
 }
