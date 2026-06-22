@@ -64,7 +64,43 @@ export function createWordAdapter(): AppAdapter {
       });
     },
 
-    insertImage: async (base64Data: string) => {
+    insertImage: async (base64Data: string, mimeType?: string) => {
+      if (mimeType === "image/svg+xml") {
+        return new Promise<void>(async (resolve, reject) => {
+          try {
+            if (Office.context.requirements.isSetSupported("WordApiDesktop", "1.2")) {
+              await Word.run(async (context) => {
+                const selection = context.document.getSelection();
+                const canvasShape = selection.range.insertCanvas();
+                canvasShape.select();
+                await context.sync();
+              });
+            }
+
+            const binString = atob(base64Data);
+            const bytes = new Uint8Array(binString.length);
+            for (let i = 0; i < binString.length; i++) {
+              bytes[i] = binString.charCodeAt(i);
+            }
+            const svgString = new TextDecoder().decode(bytes);
+
+            Office.context.document.setSelectedDataAsync(
+              svgString,
+              { coercionType: Office.CoercionType.XmlSvg },
+              (asyncResult) => {
+                if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve();
+                } else {
+                  reject(new Error(asyncResult.error.message));
+                }
+              },
+            );
+          } catch (err) {
+            reject(err instanceof Error ? err : new Error(String(err)));
+          }
+        });
+      }
+
       await Word.run(async (context) => {
         const selection = context.document.getSelection();
         selection.insertInlinePictureFromBase64(base64Data, "Replace");

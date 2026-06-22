@@ -4,7 +4,7 @@
     LinkClickResult,
     MaybePromise,
   } from "./app-adapter";
-  import { mount, unmount } from "svelte";
+  import { getAllContexts, mount, unmount } from "svelte";
   import { renderMarkdown, renderMarkdownSync } from "./markdown";
   import MermaidBlock from "./mermaid-block.svelte";
 
@@ -22,6 +22,7 @@
 
   let html = $state("");
   let container: HTMLDivElement | null = $state(null);
+  const componentContext = new Map(getAllContexts());
 
   $effect(() => {
     const currentText = text;
@@ -92,24 +93,35 @@
   });
 
   $effect(() => {
+    html; // Establish reactivity on html
     if (!container || isStreaming) return;
 
-    const placeholders = container.querySelectorAll(".mermaid-placeholder");
-    const mounted: ReturnType<typeof mount>[] = [];
+    let mounted: ReturnType<typeof mount>[] = [];
+    let isActive = true;
 
-    for (const el of placeholders) {
-      const code = el.getAttribute("data-code");
-      if (code) {
-        mounted.push(
-          mount(MermaidBlock, {
-            target: el,
-            props: { code },
-          }),
-        );
-      }
-    }
+    import("svelte").then(({ tick }) => {
+      tick().then(() => {
+        if (!isActive || !container) return;
+        
+        const placeholders = container.querySelectorAll(".mermaid-placeholder");
+        for (const el of placeholders) {
+          const codeAttr = el.getAttribute("data-code");
+          if (codeAttr) {
+            const code = decodeURIComponent(codeAttr);
+            mounted.push(
+              mount(MermaidBlock, {
+                target: el,
+                props: { code },
+                context: componentContext,
+              }),
+            );
+          }
+        }
+      });
+    });
 
     return () => {
+      isActive = false;
       for (const component of mounted) {
         unmount(component);
       }

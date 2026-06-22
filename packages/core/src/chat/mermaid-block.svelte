@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Code, Download, Eye } from "lucide-svelte";
+  import { Code, Download, Eye, Images } from "lucide-svelte";
   import { renderMermaid, svgToBase64 } from "./mermaid-utils";
   import { getChatContext } from "./chat-runtime-context";
 
@@ -69,7 +69,7 @@
           class="p-1 text-(--chat-text-muted) hover:text-(--chat-accent) transition-colors disabled:opacity-50"
           title="Insert to Document"
         >
-          <Download size={12} class={isInserting ? "animate-pulse" : ""} />
+          <Images size={12} class={isInserting ? "animate-pulse" : ""} />
         </button>
       {/if}
     </div>

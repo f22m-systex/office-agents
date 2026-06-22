@@ -59,7 +59,30 @@ export function createPowerPointAdapter(): AppAdapter {
       }
     },
 
-    insertImage: async (base64Data: string) => {
+    insertImage: async (base64Data: string, mimeType?: string) => {
+      if (mimeType === "image/svg+xml") {
+        return new Promise<void>((resolve, reject) => {
+          const binString = atob(base64Data);
+          const bytes = new Uint8Array(binString.length);
+          for (let i = 0; i < binString.length; i++) {
+            bytes[i] = binString.charCodeAt(i);
+          }
+          const svgString = new TextDecoder().decode(bytes);
+
+          Office.context.document.setSelectedDataAsync(
+            svgString,
+            { coercionType: Office.CoercionType.XmlSvg },
+            (asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                reject(new Error(asyncResult.error.message));
+              } else {
+                resolve();
+              }
+            },
+          );
+        });
+      }
+
       return new Promise((resolve, reject) => {
         Office.context.document.setSelectedDataAsync(
           base64Data,

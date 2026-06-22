@@ -49,7 +49,7 @@ const plainMarkdown = new Marked({
   renderer: {
     code(token) {
       if (token.lang === "mermaid") {
-        return `<div class="mermaid-placeholder" data-code="${escapeHtml(token.text)}"></div>`;
+        return `<div class="mermaid-placeholder" data-code="${encodeURIComponent(token.text)}"></div>`;
       }
       return false;
     },
@@ -60,7 +60,7 @@ const highlightedMarkdown = new Marked({
   renderer: {
     code(token) {
       if (token.lang === "mermaid") {
-        return `<div class="mermaid-placeholder" data-code="${escapeHtml(token.text)}"></div>`;
+        return `<div class="mermaid-placeholder" data-code="${encodeURIComponent(token.text)}"></div>`;
       }
       return (token as HighlightedCodeToken).highlightedHtml ?? false;
     },
@@ -146,12 +146,16 @@ export function renderMarkdownSync(
   options: RenderMarkdownOptions = {},
 ): string {
   const fencedCodeBlock = parseSingleFencedCodeBlock(text);
-  if (
-    fencedCodeBlock &&
-    (options.preferPlainCodeBlocks ||
-      fencedCodeBlock.code.length > MAX_HIGHLIGHT_CODE_LENGTH)
-  ) {
-    return renderPlainCodeBlock(fencedCodeBlock.code);
+  if (fencedCodeBlock) {
+    if (fencedCodeBlock.language === "mermaid") {
+      return `<div class="mermaid-placeholder" data-code="${encodeURIComponent(fencedCodeBlock.code)}"></div>`;
+    }
+    if (
+      options.preferPlainCodeBlocks ||
+      fencedCodeBlock.code.length > MAX_HIGHLIGHT_CODE_LENGTH
+    ) {
+      return renderPlainCodeBlock(fencedCodeBlock.code);
+    }
   }
 
   return sanitizeRenderedHtml(plainMarkdown.parse(text, { async: false }));
@@ -163,6 +167,10 @@ export async function renderMarkdown(
 ): Promise<string> {
   const fencedCodeBlock = parseSingleFencedCodeBlock(text);
   if (fencedCodeBlock) {
+    if (fencedCodeBlock.language === "mermaid") {
+      return `<div class="mermaid-placeholder" data-code="${encodeURIComponent(fencedCodeBlock.code)}"></div>`;
+    }
+
     const language = normalizeLanguage(fencedCodeBlock.language);
     if (
       options.preferPlainCodeBlocks ||
