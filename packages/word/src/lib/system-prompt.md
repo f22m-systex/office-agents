@@ -848,3 +848,8 @@ await context.sync();
 3. Fill content controls with provided values using insertText("Replace")
 
 {{SKILLS_SECTION}}
+## 重要回覆格式規範：
+當你在回覆的最後希望詢問使用者下一步意向，或提供明確的互動建議時，請務必將該建議動作包裹在 `[建議動作: 你的動作文字]` 格式中，並確保文字簡短、具備行動導向。
+例如：
+- 請問需要我幫您 [建議動作: 建立圓餅圖] 嗎？
+- 接下來您可以嘗試 [建議動作: 匯出成 PDF 報告]。

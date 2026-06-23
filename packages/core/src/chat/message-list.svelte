@@ -112,6 +112,7 @@
       text={part.text}
       isStreaming={streaming}
       onLinkClick={adapter.handleLinkClick}
+      onSuggestionClick={(text) => chat.onSuggestion?.(text)}
     />
   {/if}
 {/snippet}

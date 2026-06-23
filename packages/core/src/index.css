@@ -281,6 +281,26 @@ html {
   border-radius: var(--chat-radius);
 }
 
+.suggest-action-btn {
+  display: inline-block;
+  margin: 4px 6px 4px 0;
+  padding: 4px 12px;
+  background-color: var(--chat-bg-secondary);
+  border: 1px solid var(--chat-border);
+  border-radius: 20px;
+  color: var(--chat-accent);
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  line-height: 1.4;
+}
+
+.suggest-action-btn:hover {
+  background-color: var(--chat-bg-tertiary);
+  border-color: var(--chat-accent);
+  color: var(--chat-accent-hover);
+}
+
 @keyframes fade-in-out {
   0% { opacity: 1; }
   80% { opacity: 1; }

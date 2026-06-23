@@ -12,13 +12,19 @@
     text: string;
     isStreaming?: boolean;
     onLinkClick?: (context: LinkClickContext) => MaybePromise<LinkClickResult>;
+    onSuggestionClick?: (text: string) => void;
   }
 
   const STREAMING_RENDER_DELAY_MS = 48;
   const HIGHLIGHT_DELAY_MS = 160;
   const LARGE_STREAMING_TEXT_THRESHOLD = 4_000;
 
-  let { text, isStreaming = false, onLinkClick }: Props = $props();
+  let {
+    text,
+    isStreaming = false,
+    onLinkClick,
+    onSuggestionClick,
+  }: Props = $props();
 
   let html = $state("");
   let container: HTMLDivElement | null = $state(null);
@@ -131,6 +137,15 @@
   async function handleClick(event: MouseEvent) {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    const suggestionBtn = target.closest(".suggest-action-btn");
+    if (suggestionBtn instanceof HTMLButtonElement) {
+      const suggestion = suggestionBtn.getAttribute("data-suggestion");
+      if (suggestion && onSuggestionClick) {
+        onSuggestionClick(suggestion);
+        return;
+      }
+    }
 
     const link = target.closest("a[href]");
     if (!(link instanceof HTMLAnchorElement)) return;

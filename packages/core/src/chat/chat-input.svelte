@@ -96,6 +96,16 @@
     input;
     queueMicrotask(autoResize);
   });
+
+  $effect(() => {
+    chat.onSuggestion = (text: string) => {
+      input = text;
+      void handleSubmit();
+    };
+    return () => {
+      chat.onSuggestion = undefined;
+    };
+  });
 </script>
 
 <div
