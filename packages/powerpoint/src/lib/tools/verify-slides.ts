@@ -128,8 +128,11 @@ export const verifySlidesTool = defineTool({
           shapes.load(
             "items/id,items/name,items/left,items/top,items/width,items/height",
           );
-          await context.sync();
+        }
+        await context.sync();
 
+        for (const slide of slides.items) {
+          const shapes = slide.shapes;
           results.push(verifyShapes(shapes.items, slideWidth, slideHeight));
         }
 
