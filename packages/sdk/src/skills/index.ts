@@ -3,7 +3,6 @@ import {
   deleteSkillFiles,
   listSkillNames,
   loadAllSkillFiles,
-  loadSkillFiles,
   saveSkillFiles,
 } from "../storage";
 
@@ -93,10 +92,22 @@ export async function getInstalledSkills(
   ns: StorageNamespace,
 ): Promise<SkillMeta[]> {
   const names = await listSkillNames(ns);
+  const allFiles = await loadAllSkillFiles(ns);
+
+  const filesBySkill = new Map<string, typeof allFiles>();
+  for (const f of allFiles) {
+    let group = filesBySkill.get(f.skillName);
+    if (!group) {
+      group = [];
+      filesBySkill.set(f.skillName, group);
+    }
+    group.push(f);
+  }
+
   const skills: SkillMeta[] = [];
 
   for (const name of names) {
-    const files = await loadSkillFiles(ns, name);
+    const files = filesBySkill.get(name) || [];
     const skillMd = files.find((f) => f.path === "SKILL.md");
     if (skillMd) {
       const content = decoder.decode(skillMd.data);

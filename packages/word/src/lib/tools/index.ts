@@ -22,16 +22,6 @@ export function createWordTools(ctx: AgentContext) {
 }
 
 export {
-  createBashTool,
-  createReadTool,
-  createExecuteOfficeJsTool,
-  getDocumentStructureTool,
-  getDocumentTextTool,
-  createGetOoxmlTool,
-  screenshotDocumentTool,
-};
-
-export {
   defineTool,
   type ToolResult,
   toolError,
@@ -39,3 +29,12 @@ export {
   toolSuccess,
   toolText,
 } from "./types";
+export {
+  createBashTool,
+  createExecuteOfficeJsTool,
+  createGetOoxmlTool,
+  createReadTool,
+  getDocumentStructureTool,
+  getDocumentTextTool,
+  screenshotDocumentTool,
+};

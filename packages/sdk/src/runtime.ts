@@ -571,7 +571,7 @@ export class AgentRuntime {
             type: "image" as const,
             data: img.data,
             mimeType: img.mimeType,
-          }))
+          })),
         );
       } else {
         await agent.prompt(promptText);

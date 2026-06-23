@@ -66,8 +66,12 @@ export const getDocumentTextTool = defineTool({
             index: start + i,
             text: p.text,
           };
-          
-          if (p.inlinePictures && p.inlinePictures.items && p.inlinePictures.items.length > 0) {
+
+          if (
+            p.inlinePictures &&
+            p.inlinePictures.items &&
+            p.inlinePictures.items.length > 0
+          ) {
             entry.inlinePictureCount = p.inlinePictures.items.length;
           }
 
