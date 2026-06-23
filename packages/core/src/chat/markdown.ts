@@ -1,5 +1,7 @@
 import DOMPurify from "dompurify";
 import { Marked, type Token, type Tokens } from "marked";
+
+const purify = typeof DOMPurify === "function" ? DOMPurify : (DOMPurify as any).default || DOMPurify;
 import { createJavaScriptRegexEngine, getSingletonHighlighter } from "shiki";
 
 const MARKDOWN_OPTIONS = {
@@ -44,8 +46,34 @@ const highlighterPromise = getSingletonHighlighter({
   themes: [SHIKI_THEMES.light, SHIKI_THEMES.dark],
 });
 
+const suggestionExtension = {
+  name: "suggestion",
+  level: "inline",
+  start(src: string) {
+    const match = /\[建議動作:|<suggestion>/.exec(src);
+    return match?.index;
+  },
+  tokenizer(src: string) {
+    const rule = /^\[建議動作:\s*(.*?)\]|^<suggestion>(.*?)<\/suggestion>/;
+    const match = rule.exec(src);
+    if (match) {
+      const text = match[1] || match[2];
+      return {
+        type: "suggestion",
+        raw: match[0],
+        text: text.trim(),
+      };
+    }
+    return undefined;
+  },
+  renderer(token: any) {
+    return `<button class="suggest-action-btn" data-suggestion="${escapeHtml(token.text)}">💡 ${escapeHtml(token.text)}</button>`;
+  },
+};
+
 const plainMarkdown = new Marked({
   ...MARKDOWN_OPTIONS,
+  extensions: [suggestionExtension],
   renderer: {
     code(token) {
       if (token.lang === "mermaid") {
@@ -57,6 +85,7 @@ const plainMarkdown = new Marked({
 });
 const highlightedMarkdown = new Marked({
   ...MARKDOWN_OPTIONS,
+  extensions: [suggestionExtension],
   renderer: {
     code(token) {
       if (token.lang === "mermaid") {
@@ -122,9 +151,11 @@ function renderPlainCodeBlock(code: string): string {
 }
 
 function sanitizeRenderedHtml(raw: string): string {
-  const sanitized = DOMPurify.sanitize(raw, {
+  const sanitized = (purify.sanitize || purify)(raw, {
     USE_PROFILES: { html: true },
-    ADD_ATTR: ["target", "rel"],
+    ADD_TAGS: ["button"],
+    ADD_ATTR: ["target", "rel", "data-suggestion"],
+    FORCE_IND_ATTR: true,
   });
 
   const template = document.createElement("template");

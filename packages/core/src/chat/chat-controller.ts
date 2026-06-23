@@ -12,6 +12,7 @@ export class ChatController {
   readonly context: AgentContext;
   readonly state: Writable<RuntimeState>;
   adapter: AppAdapter;
+  onSuggestion?: (text: string) => void;
   #runtime: AgentRuntime;
   #unsubscribe: (() => void) | null = null;
 
