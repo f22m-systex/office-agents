@@ -461,7 +461,7 @@
   </button>
 {/snippet}
 
-{#snippet apiKeyField(label: string, value: string, onInput: (v: string) => void, placeholder: string, altBg?: boolean)}
+{#snippet apiKeyField(label: string, value: string, onInput: (v: string) => void, placeholder: string, altBg: boolean = false)}
   <label class="block">
     <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
       {label}
