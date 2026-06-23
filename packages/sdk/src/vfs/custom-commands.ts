@@ -238,7 +238,7 @@ const docxToText: DescribedCommand = {
           const ab = data.buffer.slice(
             data.byteOffset,
             data.byteOffset + data.byteLength,
-          );
+          ) as ArrayBuffer;
           const bufferCtor = (
             globalThis as typeof globalThis & {
               Buffer?: { from(input: ArrayBuffer): unknown };
