@@ -68,7 +68,12 @@ export function createWordAdapter(): AppAdapter {
       if (mimeType === "image/svg+xml") {
         return new Promise<void>(async (resolve, reject) => {
           try {
-            if (Office.context.requirements.isSetSupported("WordApiDesktop", "1.2")) {
+            if (
+              Office.context.requirements.isSetSupported(
+                "WordApiDesktop",
+                "1.2",
+              )
+            ) {
               await Word.run(async (context) => {
                 const selection = context.document.getSelection();
                 const canvasShape = selection.range.insertCanvas();

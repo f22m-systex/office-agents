@@ -1,7 +1,11 @@
 import DOMPurify from "dompurify";
 import { Marked, type Token, type Tokens } from "marked";
 
-const purify = typeof DOMPurify === "function" ? DOMPurify : (DOMPurify as any).default || DOMPurify;
+const purify =
+  typeof DOMPurify === "function"
+    ? DOMPurify
+    : (DOMPurify as any).default || DOMPurify;
+
 import { createJavaScriptRegexEngine, getSingletonHighlighter } from "shiki";
 
 const MARKDOWN_OPTIONS = {

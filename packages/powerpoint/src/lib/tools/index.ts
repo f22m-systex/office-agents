@@ -32,21 +32,6 @@ export function createPptTools(ctx: AgentContext) {
 }
 
 export {
-  createBashTool,
-  createReadTool,
-  createEditSlideChartTool,
-  createEditSlideMasterTool,
-  createEditSlideXmlTool,
-  createExecuteOfficeJsTool,
-  duplicateSlideTool,
-  editSlideTextTool,
-  listSlideShapesTool,
-  readSlideTextTool,
-  screenshotSlideTool,
-  verifySlidesTool,
-};
-
-export {
   defineTool,
   type ToolResult,
   toolError,
@@ -54,3 +39,17 @@ export {
   toolSuccess,
   toolText,
 } from "./types";
+export {
+  createBashTool,
+  createEditSlideChartTool,
+  createEditSlideMasterTool,
+  createEditSlideXmlTool,
+  createExecuteOfficeJsTool,
+  createReadTool,
+  duplicateSlideTool,
+  editSlideTextTool,
+  listSlideShapesTool,
+  readSlideTextTool,
+  screenshotSlideTool,
+  verifySlidesTool,
+};
