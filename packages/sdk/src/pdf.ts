@@ -5,7 +5,6 @@ export function loadPdfDocument(data: Uint8Array) {
   return getDocument({
     data: data.slice(),
     useWorkerFetch: false,
-    isEvalSupported: false,
     useSystemFonts: true,
   }).promise;
 }
