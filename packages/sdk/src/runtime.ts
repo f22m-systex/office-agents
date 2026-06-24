@@ -469,6 +469,17 @@ export class AgentRuntime {
         return streamSimple(model, context, {
           ...options,
           apiKey,
+          headers: {
+            "x-stainless-os": null as any,
+            "x-stainless-arch": null as any,
+            "x-stainless-lang": null as any,
+            "x-stainless-package-version": null as any,
+            "x-stainless-runtime": null as any,
+            "x-stainless-runtime-version": null as any,
+            "x-stainless-retry-count": null as any,
+            "x-stainless-timeout": null as any,
+            ...(options?.headers || {})
+          }
         });
       },
     });

@@ -168,16 +168,22 @@
 
       if (isOllama) {
         // Ollama API format
-        endpoint = new URL("/api/tags", baseUrl).toString();
+        endpoint = baseUrl.endsWith("/") ? `${baseUrl}api/tags` : `${baseUrl}/api/tags`;
       } else {
         // OpenAI-compatible API format
-        endpoint = new URL("/models", baseUrl).toString();
+        endpoint = baseUrl.endsWith("/") ? `${baseUrl}models` : `${baseUrl}/models`;
         if (apiKey) {
           headers["Authorization"] = `Bearer ${apiKey}`;
         }
       }
 
-      const response = await fetch(endpoint, {
+      let finalEndpoint = endpoint;
+      if (useProxy && proxyUrl) {
+        const baseProxyUrl = proxyUrl.endsWith("/") ? proxyUrl.slice(0, -1) : proxyUrl;
+        finalEndpoint = `${baseProxyUrl}/?url=${encodeURIComponent(endpoint)}`;
+      }
+
+      const response = await fetch(finalEndpoint, {
         method: "GET",
         headers,
       });
