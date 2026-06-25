@@ -3,12 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <link rel="icon" href="data:," />
 
     <!-- Office JavaScript API -->
     <script
       type="text/javascript"
       src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"
     ></script>
+    <script type="text/javascript">
+      // Prevent Office.js from throwing timeout error during Vite's first compilation
+      Office.onReady();
+    </script>
   </head>
 
   <body>

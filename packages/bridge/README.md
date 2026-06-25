@@ -19,6 +19,14 @@ pnpm bridge:serve
 pnpm bridge:stop
 ```
 
+### Hermes Agent Integration (External Access)
+
+If you are running the Hermes Agent on a different machine or in a Docker container, the Bridge server must bind to `0.0.0.0` to accept external WebSocket connections.
+
+```bash
+pnpm bridge -- serve --host 0.0.0.0
+```
+
 Or run the bridge CLI through the root script:
 
 ```bash
