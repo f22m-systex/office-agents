@@ -36,6 +36,7 @@ import {
   saveConfig,
   type ThinkingLevel,
 } from "./provider-config";
+import { HermesAgent } from "./providers/hermes";
 import {
   addSkill,
   getInstalledSkills,
@@ -430,6 +431,19 @@ export class AgentRuntime {
       const custom = buildCustomModel(config);
       if (!custom) return;
       baseModel = custom;
+    } else if (config.provider === "hermes") {
+      baseModel = {
+        id: config.model || "hermes-agent",
+        name: config.model || "hermes-agent",
+        api: "openai-completions" as Api,
+        provider: "hermes",
+        baseUrl: config.customBaseUrl || "http://localhost:8642/v1",
+        reasoning: true,
+        input: ["text", "image"] as ("text" | "image")[],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 128000,
+        maxTokens: 32000,
+      };
     } else {
       try {
         baseModel = (getModel as (p: string, m: string) => Model<Api>)(
@@ -455,34 +469,45 @@ export class AgentRuntime {
       this.context.commandSnippets,
     );
 
-    const agent = new Agent({
-      initialState: {
-        model: proxiedModel,
+    let agent: any;
+
+    if (config.provider === "hermes") {
+      agent = new HermesAgent({
+        config,
         systemPrompt,
-        thinkingLevel: thinkingLevelToAgent(config.thinking),
         tools: this.tools,
-        messages: existingMessages,
-      },
-      streamFn: async (model, context, options) => {
-        const cfg = this.config ?? config;
-        const apiKey = await this.getActiveApiKey(cfg);
-        return streamSimple(model, context, {
-          ...options,
-          apiKey,
-          headers: {
-            "x-stainless-os": null as any,
-            "x-stainless-arch": null as any,
-            "x-stainless-lang": null as any,
-            "x-stainless-package-version": null as any,
-            "x-stainless-runtime": null as any,
-            "x-stainless-runtime-version": null as any,
-            "x-stainless-retry-count": null as any,
-            "x-stainless-timeout": null as any,
-            ...(options?.headers || {})
-          }
-        });
-      },
-    });
+        existingMessages,
+      });
+    } else {
+      agent = new Agent({
+        initialState: {
+          model: proxiedModel,
+          systemPrompt,
+          thinkingLevel: thinkingLevelToAgent(config.thinking),
+          tools: this.tools,
+          messages: existingMessages,
+        },
+        streamFn: async (model, context, options) => {
+          const cfg = this.config ?? config;
+          const apiKey = await this.getActiveApiKey(cfg);
+          return streamSimple(model, context, {
+            ...options,
+            apiKey,
+            headers: {
+              "x-stainless-os": null as any,
+              "x-stainless-arch": null as any,
+              "x-stainless-lang": null as any,
+              "x-stainless-package-version": null as any,
+              "x-stainless-runtime": null as any,
+              "x-stainless-runtime-version": null as any,
+              "x-stainless-retry-count": null as any,
+              "x-stainless-timeout": null as any,
+              ...(options?.headers || {}),
+            },
+          });
+        },
+      });
+    }
     this.agent = agent;
     agent.subscribe(this.handleAgentEvent);
     this.pendingConfig = null;

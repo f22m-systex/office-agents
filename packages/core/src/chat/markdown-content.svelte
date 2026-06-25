@@ -100,7 +100,7 @@
 
   $effect(() => {
     html; // Establish reactivity on html
-    if (!container || isStreaming) return;
+    if (!container || isStreaming) return () => {};
 
     let mounted: ReturnType<typeof mount>[] = [];
     let isActive = true;

@@ -339,6 +339,8 @@
   function handleProviderChange(newProvider: string) {
     if (newProvider === "custom") {
       updateAndSync({ provider: newProvider, model: "", authMethod: "apikey" });
+    } else if (newProvider === "hermes") {
+      updateAndSync({ provider: newProvider, model: "hermes-agent", authMethod: "apikey" });
     } else {
       const providerModels = newProvider
         ? chat.getModelsForProvider(newProvider)
@@ -514,9 +516,32 @@
             <option value={availableProvider}>{availableProvider}</option>
           {/each}
           <option disabled>──────────</option>
+          <option value="hermes">Hermes Agent</option>
           <option value="custom">Custom Endpoint</option>
         </select>
       </label>
+
+      {#if provider === "hermes"}
+        <label class="block">
+          <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
+            Hermes API Server URL
+          </span>
+          <input
+            type="text"
+            value={customBaseUrl}
+            oninput={(e) => updateAndSync({ customBaseUrl: (e.currentTarget as HTMLInputElement).value })}
+            placeholder="http://localhost:8642/v1"
+            class="w-full bg-(--chat-input-bg) text-(--chat-text-primary) text-sm px-3 py-2 border border-(--chat-border) placeholder:text-(--chat-text-muted) focus:outline-none focus:border-(--chat-border-active)"
+            style={inputStyle}
+          />
+        </label>
+        {@render apiKeyField(
+          "API Key (Optional)",
+          apiKey,
+          (v) => updateAndSync({ apiKey: v }),
+          "Hermes API Key",
+        )}
+      {/if}
 
       {#if isCustom}
         <label class="block">
@@ -615,7 +640,7 @@
         </label>
       {/if}
 
-      {#if !isCustom && provider}
+      {#if !isCustom && provider && provider !== "hermes"}
         <label class="block">
           <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
             Model
@@ -750,7 +775,7 @@
         </div>
       {/if}
 
-      {#if showApiKeyInput}
+      {#if showApiKeyInput && provider !== "hermes"}
         <label class="block">
           <span class="block text-xs text-(--chat-text-secondary) mb-1.5">
             API Key
