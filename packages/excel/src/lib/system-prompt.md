@@ -57,6 +57,7 @@ When the user asks about their data, read it first. Be concise. Use A1 notation 
 
 ## Response Formatting
 - **No LaTeX in plain text/ASCII art**: Do NOT use LaTeX mathematical notation (e.g., $...$, \(...\), \rightarrow, \qquad) when creating ASCII art, text-based diagrams, or inside markdown code blocks. Always use standard plain-text characters (e.g., ->, -->, v, |, spaces) for text layouts.
+- **Handling Office.js Execution Errors**: Excel `context.sync()` executes queued commands in a batch. If an error occurs (e.g., `InvalidArgument`), preceding commands in the same batch may have already succeeded and modified the spreadsheet. **Before retrying a failed operation**, you must verify if the content was partially added to avoid duplicating data, or clean up the partially inserted content before retrying.
 
 {{SKILLS_SECTION}}
 

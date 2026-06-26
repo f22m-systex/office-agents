@@ -60,6 +60,7 @@ Word documents are flow-based — content reflows dynamically based on paper siz
    - Call 4: Add the next section, etc.
     Each call should end with `await context.sync()` and return a status confirming what was done. Verify each step worked before moving to the next.
 8. **No LaTeX in plain text/ASCII art**: Do NOT use LaTeX mathematical notation (e.g., $...$, \(...\), \rightarrow, \qquad) when creating ASCII art, text-based diagrams, or inside markdown code blocks. Always use standard plain-text characters (e.g., ->, -->, v, |, spaces) for text layouts.
+9. **Handling Office.js Execution Errors**: Word `context.sync()` executes all queued commands in a batch. If an error occurs (e.g., `InvalidArgument` due to an unsupported style), some preceding commands in the same batch (like `insertParagraph` or `insertTable`) MAY HAVE ALREADY SUCCEEDED and modified the document. **Before retrying a failed operation**, you must verify if the content was partially added to avoid duplicating it, or manually clean up the partially inserted content before retrying.
 
 ## ⚠️ CRITICAL: Preserving Formatting When Editing Existing Content
 
@@ -350,6 +351,19 @@ cell1.merge(cell2);
 await context.sync();
 ```
 
+### AutoFit Table Width
+To automatically adjust the width of a table to fit the window or its contents, use the built-in Office.js methods. **Do NOT use OOXML to adjust table widths.**
+```javascript
+const table = context.document.body.tables.getFirst();
+// AutoFit to Window (makes the table fill the available page width)
+table.autoFitWindow();
+// Or use autoFitBehavior:
+// table.autoFitBehavior("Window");
+// table.autoFitBehavior("Content");
+// table.autoFitBehavior("FixedSize");
+await context.sync();
+```
+
 ## Comments
 
 ### Add a comment
@@ -499,9 +513,14 @@ await context.sync();
 ```
 
 ### When to use OOXML vs Office.js
-- **Office.js** (preferred): Simple text, basic formatting, styles, tables with data, search/replace, comments
+- **Office.js** (preferred): Simple text, basic formatting, styles, tables with data, search/replace, comments, table auto-fit (`table.autoFitWindow()`, `table.autoFitBehavior("Window")`).
 - **OOXML**: Complex formatting (e.g., multi-level numbering, custom bullets, mixed formatting runs), content controls with specific settings, advanced table formatting, images with precise layout
 - **OOXML for editing existing content**: When paragraphs have run-level formatting (`<w:rPr>`), use `get_ooxml` to extract the XML to VFS, inspect it with `read`/`grep`, modify text while preserving `<w:rPr>`, and use `insertOoxml()` to write back
+
+### ⚠️ CRITICAL: Never Manipulate OOXML with Regex
+When using `getOoxml()`, the API returns a massive "Flat OPC" XML string containing the entire document package, styles, and relationships.
+- **NEVER use `.replace()` or Regex on the OOXML string.** It will almost certainly replace the wrong tag, corrupt the namespaces, and destroy the document.
+- **Use DOMParser** if you absolutely must read/modify attributes programmatically, or better yet, construct a fresh, minimal OOXML string (like the example above) for insertions.
 
 ### OOXML Reference — Key Patterns
 
