@@ -12,8 +12,9 @@ export function createExecuteOfficeJsTool(ctx: AgentContext) {
     description:
       "Execute Office.js JavaScript code to interact with the Word document. " +
       "The code receives a context parameter and runs inside Word.run(). " +
-      "Use this for any document operations: inserting/editing text, formatting, tables, images, " +
-      "comments, tracked changes, search/replace, OOXML, headers/footers, content controls, and more.",
+      "Use this ONLY as a fallback for document operations that cannot be completed " +
+      "using other high-level write tools (like insert_word_paragraph, safe_replace_paragraph_text, " +
+      "or insert_word_table). Use for comments, tracked changes, and complex operations.",
     parameters: Type.Object({
       code: Type.String({
         description:

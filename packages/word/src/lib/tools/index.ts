@@ -4,6 +4,9 @@ import { createExecuteOfficeJsTool } from "./execute-office-js";
 import { getDocumentStructureTool } from "./get-document-structure";
 import { getDocumentTextTool } from "./get-document-text";
 import { createGetOoxmlTool } from "./get-ooxml";
+import { createInsertParagraphTool } from "./insert-word-paragraph";
+import { createInsertTableTool } from "./insert-word-table";
+import { createSafeReplaceTextTool } from "./safe-replace-paragraph-text";
 import { screenshotDocumentTool } from "./screenshot-document";
 
 export function createWordTools(ctx: AgentContext) {
@@ -17,6 +20,9 @@ export function createWordTools(ctx: AgentContext) {
     getDocumentStructureTool,
     createGetOoxmlTool(ctx),
     // Word write tools
+    createInsertParagraphTool(ctx),
+    createSafeReplaceTextTool(ctx),
+    createInsertTableTool(ctx),
     createExecuteOfficeJsTool(ctx),
   ];
 }
@@ -33,7 +39,10 @@ export {
   createBashTool,
   createExecuteOfficeJsTool,
   createGetOoxmlTool,
+  createInsertParagraphTool,
+  createInsertTableTool,
   createReadTool,
+  createSafeReplaceTextTool,
   getDocumentStructureTool,
   getDocumentTextTool,
   screenshotDocumentTool,

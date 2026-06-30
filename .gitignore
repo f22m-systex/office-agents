@@ -16,6 +16,8 @@ Thumbs.db
 
 # Editor directories
 .idea/
+.chrome-user-data/
+example/
 
 # Logs
 *.log
