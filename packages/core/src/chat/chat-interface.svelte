@@ -4,6 +4,8 @@
     Check,
     ChevronDown,
     Contrast,
+    Copy,
+    Download,
     Eye,
     EyeOff,
     FolderOpen,
@@ -24,6 +26,13 @@
   import MessageList from "./message-list.svelte";
   import SettingsPanel from "./settings-panel.svelte";
   import type { ChatTab } from "./types";
+  import {
+    chatMessagesToJson,
+    chatMessagesToMarkdown,
+    copyToClipboard,
+    downloadFile,
+    sanitizeFilename,
+  } from "./export-utils";
 
   type Theme = "light" | "dark";
 
@@ -50,6 +59,9 @@
   let dragCounter = $state(0);
   let sessionDropdownOpen = $state(false);
   let sessionDropdownRef = $state<HTMLDivElement | null>(null);
+  let exportDropdownOpen = $state(false);
+  let exportDropdownRef = $state<HTMLDivElement | null>(null);
+  let copied = $state(false);
 
   let theme = $state<Theme>(loadTheme());
   let highContrast = $state<boolean>(loadHighContrast());
@@ -110,13 +122,45 @@
   }
 
   function handleClickOutside(event: MouseEvent) {
-    if (
-      sessionDropdownRef &&
-      event.target instanceof Node &&
-      !sessionDropdownRef.contains(event.target)
-    ) {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+
+    if (sessionDropdownRef && !sessionDropdownRef.contains(target)) {
       sessionDropdownOpen = false;
     }
+    if (exportDropdownRef && !exportDropdownRef.contains(target)) {
+      exportDropdownOpen = false;
+    }
+  }
+
+  async function handleCopyMarkdown() {
+    const messages = $runtimeState.messages;
+    const md = chatMessagesToMarkdown(messages, currentName);
+    const success = await copyToClipboard(md);
+    if (success) {
+      copied = true;
+      setTimeout(() => {
+        copied = false;
+      }, 2000);
+    }
+  }
+
+  function handleExportMarkdown() {
+    const messages = $runtimeState.messages;
+    const md = chatMessagesToMarkdown(messages, currentName);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `chat_${sanitizeFilename(currentName)}_${dateStr}.md`;
+    downloadFile(md, filename, "text/markdown");
+    exportDropdownOpen = false;
+  }
+
+  function handleExportJson() {
+    const messages = $runtimeState.messages;
+    const json = chatMessagesToJson(messages, currentName);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `chat_${sanitizeFilename(currentName)}_${dateStr}.json`;
+    downloadFile(json, filename, "application/json");
+    exportDropdownOpen = false;
   }
 
   function handleDragEnter(event: DragEvent) {
@@ -159,7 +203,7 @@
   });
 
   $effect(() => {
-    if (!sessionDropdownOpen) return undefined;
+    if (!sessionDropdownOpen && !exportDropdownOpen) return undefined;
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -365,6 +409,53 @@
         </button>
 
         {#if activeTab === "chat" && $runtimeState.messages.length > 0}
+          <div class="relative flex items-center" bind:this={exportDropdownRef}>
+            <button
+              type="button"
+              onclick={() => (exportDropdownOpen = !exportDropdownOpen)}
+              class={`p-1.5 transition-colors ${exportDropdownOpen ? "text-(--chat-accent)" : "text-(--chat-text-muted) hover:text-(--chat-accent)"}`}
+              data-tooltip="Export or copy history"
+            >
+              <Download size={14} />
+            </button>
+
+            {#if exportDropdownOpen}
+              <div
+                class="absolute top-full right-0 mt-1 w-52 bg-(--chat-bg) border border-(--chat-border) rounded shadow-lg z-50 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onclick={handleCopyMarkdown}
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-(--chat-text-primary) hover:bg-(--chat-bg-secondary) text-left transition-colors cursor-pointer"
+                >
+                  {#if copied}
+                    <Check size={12} class="text-(--chat-accent) shrink-0" />
+                    <span class="truncate text-(--chat-accent)">Copied!</span>
+                  {:else}
+                    <Copy size={12} class="shrink-0" />
+                    <span class="truncate">Copy as Markdown</span>
+                  {/if}
+                </button>
+                <button
+                  type="button"
+                  onclick={handleExportMarkdown}
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-(--chat-text-primary) hover:bg-(--chat-bg-secondary) text-left transition-colors cursor-pointer border-t border-(--chat-border)"
+                >
+                  <Download size={12} class="shrink-0" />
+                  <span class="truncate">Download Markdown (.md)</span>
+                </button>
+                <button
+                  type="button"
+                  onclick={handleExportJson}
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-(--chat-text-primary) hover:bg-(--chat-bg-secondary) text-left transition-colors cursor-pointer border-t border-(--chat-border)"
+                >
+                  <Download size={12} class="shrink-0" />
+                  <span class="truncate">Download JSON (.json)</span>
+                </button>
+              </div>
+            {/if}
+          </div>
+
           <button
             type="button"
             onclick={() => controller.clearMessages()}
