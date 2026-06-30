@@ -53,11 +53,19 @@ export function createInsertParagraphTool(_ctx: AgentContext) {
       ),
     }),
     execute: async (_toolCallId, params) => {
+      console.log(
+        "insert_word_paragraph: Received params:",
+        JSON.stringify(params),
+      );
       try {
         await Word.run(async (context) => {
           let paragraph: Word.Paragraph;
 
           if (params.paragraphIndex !== undefined) {
+            console.log(
+              "insert_word_paragraph: Inserting relative to paragraphIndex:",
+              params.paragraphIndex,
+            );
             const paragraphs = context.document.body.paragraphs;
             paragraphs.load("items");
             await context.sync();
@@ -86,6 +94,10 @@ export function createInsertParagraphTool(_ctx: AgentContext) {
               params.insertLocation as "Before" | "After",
             );
           } else {
+            console.log(
+              "insert_word_paragraph: Inserting relative to body, location:",
+              params.insertLocation,
+            );
             const body = context.document.body;
             if (
               params.insertLocation === "Before" ||
@@ -102,18 +114,41 @@ export function createInsertParagraphTool(_ctx: AgentContext) {
           }
 
           if (params.style) {
+            console.log(
+              "insert_word_paragraph: Setting styleBuiltIn to:",
+              params.style,
+            );
             paragraph.styleBuiltIn = params.style as Word.BuiltInStyleName;
           } else {
+            console.log(
+              "insert_word_paragraph: Setting styleBuiltIn to Normal",
+            );
             paragraph.styleBuiltIn = "Normal";
           }
 
+          console.log("insert_word_paragraph: Syncing context...");
           await context.sync();
+          console.log("insert_word_paragraph: Sync successful");
         });
         return toolSuccess({
           success: true,
           message: "Successfully inserted paragraph.",
         });
       } catch (error) {
+        console.error("insert_word_paragraph: Caught error:", error);
+        if (error instanceof OfficeExtension.Error) {
+          const parts = [error.message];
+          if (error.code) parts.push(`Code: ${error.code}`);
+          if (error.debugInfo) {
+            const { errorLocation, statement, surroundingStatements } =
+              error.debugInfo;
+            if (errorLocation) parts.push(`Location: ${errorLocation}`);
+            if (statement) parts.push(`Statement: ${statement}`);
+            if (surroundingStatements?.length)
+              parts.push(`Context: ${surroundingStatements.join("; ")}`);
+          }
+          return toolError(parts.join("\n"));
+        }
         return toolError(
           error instanceof Error ? error.message : "Error inserting paragraph",
         );
