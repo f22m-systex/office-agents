@@ -225,7 +225,7 @@ export class HermesAgent {
                 if (data.choices && data.choices[0]?.delta) {
                   const delta = data.choices[0].delta;
                   let deltaContent = delta.content || "";
-                  
+
                   if (delta.reasoning_content) {
                     if (!inReasoning) {
                       deltaContent = "<think>\n" + delta.reasoning_content;

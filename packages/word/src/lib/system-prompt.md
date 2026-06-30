@@ -23,7 +23,10 @@ WORD READ:
 - get_ooxml: Extract document OOXML structure and write it to a VFS file. Returns a summary with body-child indices, types, line numbers, and Office.js collection mappings (paragraphIndex for `body.paragraphs.items[N]`, tableIndex for `body.tables.items[N]`). Optionally scope via startChild/endChild. Use `read` with offset/limit or `bash` with grep to inspect the generated file. Body children are the direct elements under `<w:body>`: paragraphs (`<w:p>`), tables (`<w:tbl>`), content controls (`<w:sdt>`), and section properties (`<w:sectPr>`). Always read OOXML before writing it.
 
 WORD WRITE:
-- execute_office_js: Run Office.js code inside Word.run() for any document operation — formatting, tables, images, comments, tracked changes, search/replace, OOXML insertion, headers/footers, content controls, and more.
+- insert_word_paragraph: Insert a new paragraph into the document with specific text and a built-in style.
+- safe_replace_paragraph_text: Replace the text of an existing paragraph while completely preserving its original style, font family, size, color, and bold/italic states.
+- insert_word_table: Insert a table into the Word document with the specified rows, columns, data, and autoFit behavior.
+- execute_office_js: Run custom Office.js code inside Word.run() for document operations that are not supported by the high-level tools (e.g., comments, tracked changes, complex custom formatting). **CRITICAL: Use high-level write tools first. Do NOT use execute_office_js if insert_word_paragraph, safe_replace_paragraph_text, or insert_word_table can do the job.**
 
 All code in execute_office_js has access to:
 - readFile(path): Returns Promise<string> — read a text file from the VFS
@@ -33,6 +36,7 @@ All code in execute_office_js has access to:
 ## Code Pattern (execute_office_js)
 ```javascript
 // Your code runs inside Word.run(). You have `context`.
+// ONLY use as a fallback when high-level tools cannot accomplish the task.
 const body = context.document.body;
 const paragraphs = body.paragraphs;
 paragraphs.load("items");
@@ -53,12 +57,12 @@ Word documents are flow-based — content reflows dynamically based on paper siz
 4. **Paragraph numbering**: Users refer to paragraphs naturally. Tools and APIs use 0-based indices. When referencing paragraphs from get_document_text output, use the index field directly.
 5. **Read before writing**: Always inspect existing content/formatting before modifying. Use get_document_text, get_document_structure, or get_ooxml first.
 6. **Use built-in styles for new content**: Prefer Word's built-in styles (Heading1, Heading2, Normal, ListBullet, ListNumber, Title, Subtitle, Quote, IntenseQuote, etc.) when creating new documents or adding new content. This ensures consistent formatting and proper document structure.
-7. **Build incrementally**: Break large document operations into multiple execute_office_js calls — one logical section or step at a time. Do NOT write 100+ lines in a single call. If one step fails (e.g., an unsupported API), only that step needs to be fixed rather than losing all progress. For example, when creating a document:
-   - Call 1: Set up page layout, styles, headers/footers
-   - Call 2: Add the title and introduction section
-   - Call 3: Add the first content section with tables
-   - Call 4: Add the next section, etc.
-    Each call should end with `await context.sync()` and return a status confirming what was done. Verify each step worked before moving to the next.
+7. **Build incrementally**: Break large document operations into multiple tool calls (e.g., `insert_word_paragraph`, `insert_word_table`) — one logical section or step at a time. Do NOT try to build or edit the entire document in a single tool call. If one step fails, only that step needs to be fixed rather than losing all progress. For example, when creating a document:
+   - Call 1: Set up styles and headers/footers (via fallback if needed)
+   - Call 2: Add the title paragraph using `insert_word_paragraph`
+   - Call 3: Add sections and content using `insert_word_paragraph`
+   - Call 4: Add tables using `insert_word_table`
+   Each call should confirm what was done. Verify each step worked before moving to the next.
 8. **No LaTeX in plain text/ASCII art**: Do NOT use LaTeX mathematical notation (e.g., $...$, \(...\), \rightarrow, \qquad) when creating ASCII art, text-based diagrams, or inside markdown code blocks. Always use standard plain-text characters (e.g., ->, -->, v, |, spaces) for text layouts.
 9. **Handling Office.js Execution Errors**: Word `context.sync()` executes all queued commands in a batch. If an error occurs (e.g., `InvalidArgument` due to an unsupported style), some preceding commands in the same batch (like `insertParagraph` or `insertTable`) MAY HAVE ALREADY SUCCEEDED and modified the document. **Before retrying a failed operation**, you must verify if the content was partially added to avoid duplicating it, or manually clean up the partially inserted content before retrying.
 
@@ -82,38 +86,17 @@ Word documents are flow-based — content reflows dynamically based on paper siz
    - Use `insertOoxml()` instead of `insertText()`
 4. **If no direct formatting exists** (OOXML has no `<w:rPr>` or only `<w:pStyle>`), safe to use `insertText()` + set the style
 
-### Alternative: Use font properties after insertText
-If OOXML insertion is too complex for a simple text change, you can also preserve formatting by reading and re-applying font properties:
-```javascript
-const paragraphs = context.document.body.paragraphs;
-paragraphs.load("items");
-await context.sync();
-const target = paragraphs.items[idx];
-target.font.load("name,size,color,bold,italic,underline");
-await context.sync();
-// Save original formatting
-const origFont = target.font.name;
-const origSize = target.font.size;
-const origColor = target.font.color;
-const origBold = target.font.bold;
-const origItalic = target.font.italic;
-// Replace text
-target.clear();
-const newRange = target.insertText("New text", "Start");
-// Re-apply original formatting
-newRange.font.name = origFont;
-newRange.font.size = origSize;
-newRange.font.color = origColor;
-newRange.font.bold = origBold;
-newRange.font.italic = origItalic;
-await context.sync();
-```
+### Recommended: Use `safe_replace_paragraph_text`
+For simple text replacement in a paragraph, the most reliable approach is to use the `safe_replace_paragraph_text` tool, which automatically implements the read-and-reapply font property workflow in the backend.
+
+Simply call:
+`safe_replace_paragraph_text` with the `paragraphIndex` and `newText`.
 
 ### When to use which approach:
-- **Simple text replacement, same formatting**: Read font properties → insertText → re-apply font properties
-- **Mixed formatting runs** (e.g., part bold, part colored): Use get_ooxml → inspect the VFS file → construct OOXML → insertOoxml
-- **New content in empty area**: Safe to use insertText + style
-- **Search and replace** (same text, different words): Use `search().insertText("Replace")` — this preserves run formatting automatically
+- **Simple text replacement, same formatting**: Use the `safe_replace_paragraph_text` tool.
+- **Mixed formatting runs** (e.g., part bold, part colored): Use `get_ooxml` → inspect the VFS file → construct OOXML → use `insertOoxml()` inside `execute_office_js` as a fallback.
+- **New content in empty area**: Use `insert_word_paragraph`.
+- **Search and replace** (same text, different words): Use `body.search().insertText("Replace")` inside `execute_office_js` fallback.
 
 ## Key APIs
 - `context.document.body` — Document body (paragraphs, tables, content controls, inline pictures)
@@ -144,6 +127,10 @@ return { html: rangeHtml.value };
 The output includes Office-style CSS (`mso-*` properties) — focus on the text content and structural tags (`<table>`, `<b>`, `<i>`, `<h1>`–`<h6>`, `<ul>`, `<ol>`).
 
 ## Inserting and Editing Text
+
+> [!IMPORTANT]
+> **Prefer High-Level Tools**: Always use `insert_word_paragraph`, `safe_replace_paragraph_text`, and `insert_word_table` for paragraph creation, text editing, and table insertion.
+> The JavaScript patterns below are ONLY for fallback scenarios via `execute_office_js` when the high-level tools are insufficient.
 
 ### Insert a paragraph
 ```javascript
@@ -361,6 +348,18 @@ table.autoFitWindow();
 // table.autoFitBehavior("Window");
 // table.autoFitBehavior("Content");
 // table.autoFitBehavior("FixedSize");
+await context.sync();
+```
+
+### Format Table Borders
+To format borders (e.g., make them bold), use the native `getBorder()` method. **Do NOT use OOXML for basic border formatting.**
+```javascript
+const table = context.document.body.tables.getFirst();
+// Valid locations: "Top", "Left", "Bottom", "Right", "InsideHorizontal", "InsideVertical", "Inside", "Outside", "All"
+const border = table.getBorder("All");
+border.type = "Single"; // e.g., "Single", "Double", "Dashed", "None"
+border.width = 12; // 12 points = 1.5pt width (visually bold)
+border.color = "#000000";
 await context.sync();
 ```
 
